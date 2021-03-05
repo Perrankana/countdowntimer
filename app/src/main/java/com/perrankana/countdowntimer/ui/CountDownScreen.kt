@@ -13,39 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.perrankana.countdowntimer
+package com.perrankana.countdowntimer.ui
 
-import android.os.Bundle
-import androidx.activity.compose.setContent
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.Button
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.tooling.preview.Preview
-import com.perrankana.countdowntimer.ui.CountDownScreen
 import com.perrankana.countdowntimer.ui.theme.MyTheme
+import com.perrankana.countdowntimer.viewmodels.CountDownState
 import com.perrankana.countdowntimer.viewmodels.CountDownViewModel
 
-class MainActivity : AppCompatActivity() {
+@Composable
+fun CountDownScreen(countDownViewModel: CountDownViewModel) {
+    val countDownState: CountDownState by countDownViewModel.count.observeAsState(CountDownState.Start())
 
-    private val countDownViewModelViewModel by viewModels<CountDownViewModel>()
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            MyTheme {
-                MyApp(countDownViewModelViewModel)
+    Column {
+        Text(text = "${countDownState.count}")
+        if (countDownState.showButton) {
+            Button(onClick = { countDownViewModel.onCountDownStart() }) {
+                Text(text = "Start")
             }
         }
-    }
-}
-
-// Start building your app here!
-@Composable
-fun MyApp(todoViewModel: CountDownViewModel) {
-    Surface(color = MaterialTheme.colors.background) {
-        CountDownScreen(todoViewModel)
     }
 }
 
@@ -53,7 +44,7 @@ fun MyApp(todoViewModel: CountDownViewModel) {
 @Composable
 fun LightPreview() {
     MyTheme {
-        MyApp(CountDownViewModel())
+        CountDownScreen(CountDownViewModel())
     }
 }
 
@@ -61,6 +52,6 @@ fun LightPreview() {
 @Composable
 fun DarkPreview() {
     MyTheme(darkTheme = true) {
-        MyApp(CountDownViewModel())
+        CountDownScreen(CountDownViewModel())
     }
 }
