@@ -40,7 +40,7 @@ class CountDownViewModel : ViewModel(), CoroutineScope by MainScope() {
             tickFlow(timerCount).collect {
                 _count.value = CountDownState.Counting(timerCount, it)
                 if (it == 0) {
-                    _count.value = CountDownState.SetTimer(timerCount)
+                    _count.value = CountDownState.End()
                 }
             }
         }
@@ -61,10 +61,15 @@ class CountDownViewModel : ViewModel(), CoroutineScope by MainScope() {
             _count.value = CountDownState.SetTimer(timer.toInt())
         }
     }
+
+    fun onStartAgain() {
+        _count.value = CountDownState.SetTimer()
+    }
 }
 
 sealed class CountDownState(val count: Int) {
     class SetTimer(count: Int = 0) : CountDownState(count)
     class Start(count: Int) : CountDownState(count)
     class Counting(val totalCount: Int, count: Int) : CountDownState(count)
+    class End : CountDownState(count = 0)
 }

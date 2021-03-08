@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -65,59 +64,97 @@ fun CountDownScreen(countDownViewModel: CountDownViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        if (countDownState is CountDownState.Counting) {
-            CountDown(countDownState as CountDownState.Counting)
-        }
         if (countDownState is CountDownState.SetTimer ||
             countDownState is CountDownState.Start
         ) {
-            EnterCount(countDownState) {
-                countDownViewModel.onTimerChanged(it)
-            }
-            Button(
-                modifier = Modifier.padding(top = 24.dp),
-                onClick = { countDownViewModel.onCountDownStart() }
+            EnterCount(
+                countDownState,
+                onValueChanged = {
+                    countDownViewModel.onTimerChanged(it)
+                }
             ) {
-                Text(text = "Start", style = typography.h3)
+                countDownViewModel.onCountDownStart()
+            }
+        }
+        if (countDownState is CountDownState.Counting ||
+            countDownState is CountDownState.End
+        ) {
+
+            ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+                val (timer, button) = createRefs()
+
+                if (countDownState is CountDownState.Counting) {
+                    CountDown(
+                        countDownState = countDownState as CountDownState.Counting,
+                        modifier = Modifier.constrainAs(timer) {
+                            centerTo(parent)
+                        }
+                    )
+                }
+                if (countDownState is CountDownState.End) {
+                    Wheels(
+                        360f, 360f, countDownState,
+                        modifier = Modifier.constrainAs(timer) {
+                            centerTo(parent)
+                        }
+                    )
+                    Button(
+                        modifier = Modifier
+                            .constrainAs(button) {
+                                bottom.linkTo(parent.bottom, margin = 24.dp)
+                                centerHorizontallyTo(parent)
+                            },
+                        onClick = { countDownViewModel.onStartAgain() }
+                    ) {
+                        Text(text = "Start Again", style = typography.h4)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun EnterCount(countDownState: CountDownState, onValueChanged: (String) -> Unit) {
-    TextField(
-        value = countDownState.count.toString(),
-        onValueChange = onValueChanged,
-        textStyle = typography.h4,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        shape = RoundedCornerShape(40.dp),
-        colors = TextFieldDefaults.textFieldColors(
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent
-        )
-    )
-}
+private fun EnterCount(
+    countDownState: CountDownState,
+    onValueChanged: (String) -> Unit,
+    onCountEntered: () -> Unit
+) {
+    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
 
-@Composable
-private fun KeyBoardButton(key: Int, onClick: (Int) -> Unit) {
-    Button(
-        onClick = { onClick(key) },
-        modifier = Modifier
-            .width(80.dp)
-            .height(80.dp)
-            .padding(8.dp),
-        shape = RoundedCornerShape(50)
-    ) {
-        Text(
-            text = key.toString(), style = typography.h4
+        val (textField, button) = createRefs()
+
+        TextField(
+            modifier = Modifier.constrainAs(textField) {
+                centerTo(parent)
+            },
+            value = countDownState.count.toString(),
+            onValueChange = onValueChanged,
+            textStyle = typography.h4,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = RoundedCornerShape(40.dp),
+            colors = TextFieldDefaults.textFieldColors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            )
         )
+        Button(
+            modifier = Modifier
+                .constrainAs(button) {
+                    bottom.linkTo(parent.bottom, margin = 24.dp)
+                    centerHorizontallyTo(parent)
+                },
+            onClick = onCountEntered
+        ) {
+            Text(text = "Start", style = typography.h4)
+        }
     }
 }
 
 @Composable
 private fun CountDown(
-    countDownState: CountDownState.Counting
+    countDownState: CountDownState.Counting,
+    modifier: Modifier = Modifier
 ) {
     val arc: Float by animateFloatAsState(
         countToArc(
@@ -135,9 +172,20 @@ private fun CountDown(
             repeatMode = RepeatMode.Restart
         )
     )
+    Wheels(arc, arc2, countDownState, modifier)
+}
 
+@Composable
+private fun Wheels(
+    arc: Float,
+    arc2: Float,
+    countDownState: CountDownState,
+    modifier: Modifier = Modifier
+) {
     ConstraintLayout(
-        modifier = Modifier.fillMaxSize()
+        modifier = modifier
+            .width(250.dp)
+            .height(250.dp)
     ) {
         val (countText, arch) = createRefs()
         val background = MaterialTheme.colors.secondary
