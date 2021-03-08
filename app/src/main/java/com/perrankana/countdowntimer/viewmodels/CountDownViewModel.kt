@@ -15,11 +15,13 @@
  */
 package com.perrankana.countdowntimer.viewmodels
 
+import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.perrankana.countdowntimer.helper.CountDownTimer
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
@@ -28,32 +30,41 @@ import kotlinx.coroutines.launch
 
 class CountDownViewModel : ViewModel(), CoroutineScope by MainScope() {
 
-    private val _count = MutableLiveData<CountDownState>(CountDownState.Start())
+    private val _count = MutableLiveData<CountDownState>(CountDownState.SetTimer())
     val count: LiveData<CountDownState> = _count
 
     fun onCountDownStart() {
+        val timerCount = count.value?.count ?: 0
+        if (timerCount == 0) return
         launch {
-            tickFlow(20).collect {
-                _count.value = CountDownState.Counting(it)
+            tickFlow(timerCount).collect {
+                _count.value = CountDownState.Counting(timerCount, it)
                 if (it == 0) {
-                    _count.value = CountDownState.End()
+                    _count.value = CountDownState.SetTimer(timerCount)
                 }
             }
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun tickFlow(countdown: Int) = callbackFlow {
-        val timer = CountDownTimer(countdown = countdown) { time ->
+        val timer = CountDownTimer(countdown) { time ->
             offer(time)
         }
         awaitClose {
             timer.cancel()
         }
     }
+
+    fun onTimerChanged(timer: String) {
+        if (timer.isDigitsOnly()) {
+            _count.value = CountDownState.SetTimer(timer.toInt())
+        }
+    }
 }
 
-sealed class CountDownState(val count: Int, val showButton: Boolean) {
-    class Start : CountDownState(count = 20, showButton = true)
-    class Counting(count: Int) : CountDownState(count = count, showButton = false)
-    class End : CountDownState(count = 0, showButton = true)
+sealed class CountDownState(val count: Int) {
+    class SetTimer(count: Int = 0) : CountDownState(count)
+    class Start(count: Int) : CountDownState(count)
+    class Counting(val totalCount: Int, count: Int) : CountDownState(count)
 }

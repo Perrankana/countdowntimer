@@ -15,30 +15,189 @@
  */
 package com.perrankana.countdowntimer.ui
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.constraintlayout.compose.ConstraintLayout
 import com.perrankana.countdowntimer.ui.theme.MyTheme
+import com.perrankana.countdowntimer.ui.theme.typography
 import com.perrankana.countdowntimer.viewmodels.CountDownState
 import com.perrankana.countdowntimer.viewmodels.CountDownViewModel
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun CountDownScreen(countDownViewModel: CountDownViewModel) {
-    val countDownState: CountDownState by countDownViewModel.count.observeAsState(CountDownState.Start())
+    val countDownState: CountDownState by countDownViewModel.count.observeAsState(CountDownState.SetTimer())
 
-    Column {
-        Text(text = "${countDownState.count}")
-        if (countDownState.showButton) {
-            Button(onClick = { countDownViewModel.onCountDownStart() }) {
-                Text(text = "Start")
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        if (countDownState is CountDownState.Counting) {
+            CountDown(countDownState as CountDownState.Counting)
+        }
+        if (countDownState is CountDownState.SetTimer ||
+            countDownState is CountDownState.Start
+        ) {
+            EnterCount(countDownState) {
+                countDownViewModel.onTimerChanged(it)
+            }
+            Button(
+                modifier = Modifier.padding(top = 24.dp),
+                onClick = { countDownViewModel.onCountDownStart() }
+            ) {
+                Text(text = "Start", style = typography.h3)
             }
         }
     }
 }
+
+@Composable
+private fun EnterCount(countDownState: CountDownState, onValueChanged: (String) -> Unit) {
+    TextField(
+        value = countDownState.count.toString(),
+        onValueChange = onValueChanged,
+        textStyle = typography.h4,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        shape = RoundedCornerShape(40.dp),
+        colors = TextFieldDefaults.textFieldColors(
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        )
+    )
+}
+
+@Composable
+private fun KeyBoardButton(key: Int, onClick: (Int) -> Unit) {
+    Button(
+        onClick = { onClick(key) },
+        modifier = Modifier
+            .width(80.dp)
+            .height(80.dp)
+            .padding(8.dp),
+        shape = RoundedCornerShape(50)
+    ) {
+        Text(
+            text = key.toString(), style = typography.h4
+        )
+    }
+}
+
+@Composable
+private fun CountDown(
+    countDownState: CountDownState.Counting
+) {
+    val arc: Float by animateFloatAsState(
+        countToArc(
+            countDownState.count,
+            countDownState.totalCount
+        )
+    )
+    val arc2: Float by rememberInfiniteTransition().animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = TimeUnit.SECONDS.toMillis(1).toInt()
+            },
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    ConstraintLayout(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        val (countText, arch) = createRefs()
+        val background = MaterialTheme.colors.secondary
+        val primary = MaterialTheme.colors.primary
+
+        Canvas(
+            modifier = Modifier
+                .width(250.dp)
+                .height(250.dp)
+                .constrainAs(arch) {
+                    centerTo(countText)
+                }
+        ) {
+            drawOuterArc(primary, arc, size.width, size.height)
+            drawInnerArc(background, arc2, size.width, size.height)
+        }
+        Text(
+            text = "${countDownState.count}",
+            modifier = Modifier.constrainAs(countText) {
+                centerTo(parent)
+            },
+            style = typography.h1, color = MaterialTheme.colors.onBackground
+        )
+    }
+}
+
+private fun DrawScope.drawInnerArc(
+    background: Color,
+    arc2: Float,
+    canvasWidth: Float,
+    canvasHeight: Float
+) {
+    drawArc(
+        color = background,
+        -90f,
+        arc2,
+        useCenter = true,
+        alpha = 0.8f,
+        size = Size(canvasWidth - 100, canvasHeight - 100),
+        topLeft = Offset(x = 50f, y = 50f)
+    )
+}
+
+private fun DrawScope.drawOuterArc(
+    primary: Color,
+    arc: Float,
+    canvasWidth: Float,
+    canvasHeight: Float
+) {
+    drawArc(
+        primary,
+        -90f,
+        arc,
+        useCenter = false,
+        size = Size(canvasWidth, canvasHeight),
+        style = Stroke(width = 40f, cap = StrokeCap.Round)
+    )
+}
+
+private fun countToArc(count: Int, totalCount: Int) = (360 - ((count * 360) / totalCount)).toFloat()
 
 @Preview("Light Theme", widthDp = 360, heightDp = 640)
 @Composable
