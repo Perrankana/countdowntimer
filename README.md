@@ -19,7 +19,7 @@ Count Down Timer that only counts down seconds, not really useful but beauty.
 <img src="/results/screenshot_1.png" width="260">&emsp;<img src="/results/screenshot_2.png" width="260">
 <img src="/results/screenshot_3.png" width="260">&emsp;<img src="/results/screenshot_4.png" width="260">
 <img src="/results/screenshot_5.png" width="260">&emsp;<img src="/results/screenshot_6.png" width="260">
-<img src="/results/video_gif.png" width="260">
+<img src="/results/video_gif.gif" width="260">
 ## License
 ```
 Copyright 2020 The Android Open Source Project
